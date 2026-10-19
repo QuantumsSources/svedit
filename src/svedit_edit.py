@@ -831,8 +831,11 @@ class MCDFileEditor:
         contributor_message = f" by {contributor}" \
             if contributor is not None else ""
 
-        matched = f" {colors.DIM}(matched to {mapped_fmt}.xml{contributor_message}){colors.RESET}"\
-            if (frame.FormatID != mapped_fmt) and self._format_file_path else ""
+        if self._format_file_path:
+            matched = f" {colors.DIM}(matched to {mapped_fmt}.xml{contributor_message}){colors.RESET}"\
+                if frame.FormatID != mapped_fmt else ""
+        else:
+            matched = f" {colors.DIM}(missing format file){colors.RESET}"
 
         product = frame.ProductCode.replace('-', f'{colors.DIM}-{colors.RESET}')
         game_name = db.get_db_entry(self.game_db, frame.ProductCode).localized_name
@@ -851,7 +854,8 @@ class MCDFileEditor:
                 ((message + "─" * width), MCDSaveFilePath(""), False, True),
                 ("", MCDSaveFilePath(""), False, True),
                 ("This file does not exist yet!", MCDSaveFilePath(""), False, True),
-                ("If you'd like, press [Enter] to create a CONTRIBUTE.py file for it!", MCDSaveFilePath(""), False, True),
+                (f"{colors.ITALIC}If you'd like, press [Enter] to create a CONTRIBUTE.py file for it!{colors.RESET}",
+                 MCDSaveFilePath(""), False, True),
             ])
         else:
             message = f"─[ ↑ Metadata ↓ Save Data ]"
