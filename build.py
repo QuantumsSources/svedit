@@ -8,7 +8,7 @@ from pathlib import Path
 from subprocess import CompletedProcess
 from src.svedit_core import VERSION, VERSION_NAME
 
-BUILD_SCRIPT_VERSION = "1.3"
+BUILD_SCRIPT_VERSION = "1.4"
 
 argv = sys.argv[1:]
 QUIET_MODE = "--quiet" in argv
@@ -39,8 +39,8 @@ if BUILD_ONLY_MODE:
 else:
     print("> - build and install svedit;")
 
-def run(args: str|list[str]) -> CompletedProcess:
-    return subprocess.run(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+def run(args: str|list[str], show_output: bool = False) -> CompletedProcess:
+    return subprocess.run(args, stderr=subprocess.DEVNULL if not show_output else None)
 
 if sys.platform not in ("linux", "android"):
     print("error: currently svedit only works on linux!")
@@ -167,7 +167,7 @@ if BUILD_ONLY_MODE:
     _print(f"> copying icon to {DIST_DIR}")
     shutil.copy(SRC_DIR / "svedit.png", DIST_DIR)
 
-    if run([f"./{DIST_DIR}/svedit.bin", "-h"]).returncode != 0:
+    if run([f"./{DIST_DIR}/svedit.bin", "-h"], show_output=True).returncode != 0:
         print("error: build failed!")
         sys.exit(1)
 
@@ -216,7 +216,7 @@ if _get_confirmation("remove temporary build files?"):
     _clean()
     _print("> build files removed")
 
-if run(["svedit", "-h"]).returncode != 0:
+if run(["svedit", "-h"], show_output=True).returncode != 0:
     print("\n> install failed!")
     sys.exit(1)
 
