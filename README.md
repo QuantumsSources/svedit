@@ -24,6 +24,12 @@ Made with ♥ by quantum.
 - It will also automatically download everything it needs to run on first startup (see below).
 - Additionally, `svedit` makes it super easy to get started with collaboration!
 
+<div align="center">
+<img src="readme/edit_example.png" width="600" alt="svedit's editor interface">
+<br>
+<sub><b>Figure 2</b>: svedit's editor interface, editing Castlevania - Symphony of the Night</sub>
+</div>
+
 > [!note]
 > Whenever you come across a format marked as "unfinished", `svedit` will let you know at the bottom!\
 > If you wish, you can also have `svedit` generate a `CONTRIBUTE.py` script as a  one-click solution, to make
@@ -38,12 +44,11 @@ contributions as easy as possible.
 by default;
 > 2. If used with `--force-dl --db-src=<source>`, download content at `<source>` instead;
 > 3. Cache it into a `.pkl` file for quicker startup times;
-
-<div align="center">
-<img src="readme/dl_example.png" width="750" alt="svedit downloading the PlayStation© game database">
-<br>
-<sub><b>Figure 2</b>: svedit downloading the PlayStation© game database</sub>
-</div>
+> <div align="center">
+> <img src="readme/dl_example.png" width="750" alt="svedit downloading the PlayStation© game database">
+> <br>
+> <sub><b>Figure 3</b>: svedit downloading the PlayStation© game database</sub>
+> </div>
 
 ### Built for collaboration
 - To see a list of currently supported formats, run `svedit --fmts`.
@@ -54,7 +59,7 @@ interface!
 <div align="center">
 <img src="readme/fmts_example.png" width="500" alt="svedit's supported formats">
 <br>
-<sub><b>Figure 3</b>: svedit's current (12/06/26) list of supported formats (Help expand it!)</sub>
+<sub><b>Figure 4</b>: svedit's current (12/06/26) list of supported formats (Help expand it!)</sub>
 </div>
 
 ## Installation
@@ -111,6 +116,12 @@ I highly recommend another tool of mine, built practically specifically for this
 
 I also recommend reading over the documentation of the XML structure `svedit` expects in `XML_DOCS.md`.
 
+<div align="center">
+<img src="readme/xml_example.png" width="600" alt="editing DRAX.xml">
+<br>
+<sub><b>Figure 5</b>: Editing <code>DRAX.xml</code>. Note the XML structure.</sub>
+</div>
+
 Once you've decided to start (again, **thank you**!), do this:
 1. Fork this repository.
 2. Clone your fork.
@@ -118,6 +129,14 @@ Once you've decided to start (again, **thank you**!), do this:
 you can start reverse engineering it.
 4. After you're done (might take a while!) making the XML translation layer, push it to GitHub, start a pull
 request, and wait for it to be accepted.
+
+> [!note]
+> If you find it easier, `svedit` can generate a `CONTRIBUTE.py` file that does everything above under an
+> easy-to-use, interactive interface.
+> 
+> To do it, launch `svedit` with a memory card file that contains a game with no format file, then open it.\
+> Afterward, scroll all the way down, press **Enter**, and run `CONTRIBUTE-%fmt.py` (change `%fmt` with the
+> actual format ID).
 
 > [!note]
 > If you'd like, you can add your GitHub name, etc... (no links, sorry!) in your XML file's root 
@@ -140,10 +159,10 @@ node as an attribute `contributor`.\
 If you find a format that matches on one or more of the below criteria, you can also update it.
 
 You can update a format if it falls into one or more of these criteria:
-- Hard to understand;
-- Weirdly formatted;
-- Incorrect;
-- Incomplete;
+- Hard to understand (e.g. unnecessary `enum` or `struct` tags, etc...);
+- Weirdly formatted (e.g. unnecessary `dict` or `list` tags, etc...);
+- Incorrect (e.g. incorrect `checksum` ranges, etc...);
+- Incomplete (note if they have `unfinished="true"` under their `file` tag);
 
 Doing so follows a similar pattern to creating a new format file:
 1. Fork this repository.
@@ -152,8 +171,15 @@ Doing so follows a similar pattern to creating a new format file:
 4. Start a pull request and wait for it to be accepted.
 
 > [!note]
-> If you'd like, you can also claim credit for updating a file, though obviously don't remove the original
-author.\
+> If you find it easier, `svedit` can generate a `CONTRIBUTE.py` file that does everything above under an
+> easy-to-use, interactive interface.
+> 
+> To do it, launch `svedit` with a memory card file that contains a game with an unfinished format file and open it.\
+> Afterward, scroll all the way down, press **Enter**, and run `CONTRIBUTE-%fmt.py` (change `%fmt` with the
+> actual format ID).
+
+> [!note]
+> If you'd like, you can also claim credit for updating a file, though obviously don't remove the original author.\
 > Here's an example:
 > ```xml
 > <svedit contributor="QuantumsSources, <you>" pattern="..." generic="..."/>
@@ -164,7 +190,12 @@ author.\
 Like most open-source projects, `svedit` accepts code contributions from others!\
 If you know what you're doing, and know some Python, this is also a great way to help out! 
 
-To help out with bugs or features, here's what you need to do:
+To help out with bugs or features, here's what you'll need:
+1. All of `svedit`'s dependencies (see above, under **Installation**);
+2. A code editor (e.g. `vim`, `pycharm`, `vscodium`);
+3. A lot of patience;
+
+After you meet all the above prerequisites, you can get started on your contribution:
 1. Fork this repository.
 2. Clone your fork.
 3. Make your changes there, and test them out locally.
@@ -174,14 +205,14 @@ To help out with bugs or features, here's what you need to do:
 > Even if contributions are low, I can't promise quick responses!\
 > Thank you for your consideration, and please don't think I'm actively ghosting you!
 > 
-> If there are any issues with your contribution, I'll let you know what they are.
+> If there are any issues with your contribution, I'll let you know what they are.\
 > Additionally, if you have any questions or concerns, open an issue about it.
 
 ## Footnotes
 > [!important]
 > Much like `svedit` downloads **DuckStation's game database** off of GitHub, `svedit`'s entire format library
-(aka, anything in `./fmts/`), which, as part of `svedit`, is also licensed under GPLv3 (or later), is freely available for download by
-anyone at all.
+(aka, anything in `./fmts/`), which, as part of `svedit`, is also licensed under GPLv3 (or later), is freely
+available for download by anyone at all.
 > 
 > _No_, you _don't_ need to ask for permission, go right ahead.
 
@@ -189,10 +220,10 @@ anyone at all.
 > `svedit` is actively tested out on multiple terminals.
 > 
 > Here's what you can expect:
-> 1. `kitty`: The one I use to develop `svedit`, best experience overall
-> 2. `alacritty`: Also on par with `kitty`
+> 1. `kitty`: The one I use to develop `svedit`, best experience overall.
+> 2. `alacritty`: Also on par with `kitty`.
 > 3. `konsole` / `gnome-terminal`: You might experience some flickering, though usually nothing major.
-> 4. `tty`: Functional *(-ish)*, though with frequent flickers and no RGB color
+> 4. `tty`: Functional *(-ish)*, though with frequent flickers and no RGB color.
 > 5. `cmd` / `powershell`: `svedit` is not tested on Windows or WSL.
 
 > [!note]
