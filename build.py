@@ -1,3 +1,4 @@
+import os
 import sys
 import time
 import shutil
@@ -7,7 +8,36 @@ from pathlib import Path
 from subprocess import CompletedProcess
 from src.svedit_core import VERSION, VERSION_NAME
 
-BUILD_SCRIPT_VERSION = "1.2"
+BUILD_SCRIPT_VERSION = "1.3"
+
+argv = sys.argv[1:]
+QUIET_MODE = "--quiet" in argv
+BUILD_ONLY_MODE = "--buildonly" in argv
+NO_CONFIRMATION_MODE = "--yes" in argv
+
+if "--help" in sys.argv[1:]:
+    print("> running with:")
+    print(">    '--help' will: print this help message and exit early;")
+    print(">    '--buildonly' will: only build svedit, not install it;")
+    print(">    '--yes' will: not ask for confirmation at any point;")
+    print(">                  (be sure you know everything this script will do!)")
+    sys.exit(0)
+
+def _print(s: str) -> None:
+    if QUIET_MODE:
+        return
+    print(s)
+
+print(f"> running build.py v{BUILD_SCRIPT_VERSION}.")
+print("> this run will:")
+if NO_CONFIRMATION_MODE:
+    print("> - not ask for confirmation;")
+if QUIET_MODE:
+    print("> - print reduced information;")
+if BUILD_ONLY_MODE:
+    print("> - only build svedit, not install it;")
+else:
+    print("> - build and install svedit;")
 
 def run(args: str|list[str]) -> CompletedProcess:
     return subprocess.run(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -30,11 +60,13 @@ def _clean():
         shutil.rmtree(Path("svedit.dist"))
     if Path("svedit.build").exists():
         shutil.rmtree(Path("svedit.build"))
+
+os.chdir(Path(__file__).resolve().parent)
 _clean()
 
 result = run(["killall", "svedit"])
 if result.returncode == 0:
-    print("> killed previous svedit processes\n")
+    _print("> killed previous svedit processes\n")
 
 HOME = Path.home()
 INSTALL_DIR = HOME / ".local/share/svedit"
@@ -54,16 +86,27 @@ if not BUILD_TARGET.exists():
 def _build() -> CompletedProcess:
     cmd = ["nuitka", "--mode=standalone", "--include-package=yaml", str(BUILD_TARGET)]
     try:
-        return subprocess.run(cmd)
+        return subprocess.run(cmd, stderr=subprocess.DEVNULL if QUIET_MODE else None)
     except KeyboardInterrupt:
-        print("error: build interrupted!")
+        print("\nerror: build interrupted!")
         sys.exit(1)
 
-if INSTALL_DIR.exists():
-    if input(f"> clean old build files? ({INSTALL_DIR}) [Y/n] ").lower().strip() in ("y", "yes", ""):
+def _get_confirmation(prompt: str) -> bool:
+    if NO_CONFIRMATION_MODE:
+        _print(f"> {prompt} (auto accepted with --yes)")
+        return True
+
+    try:
+        return input(f"{prompt} [Y/n] ") in ("y", "yes", "")
+    except KeyboardInterrupt:
+        print("\nerror: interrupt signal received!")
+        sys.exit(1)
+
+if not BUILD_ONLY_MODE and INSTALL_DIR.exists():
+    if _get_confirmation(f"clean old build files? ({INSTALL_DIR})"):
         (BIN_DIR / "selfhex.bin").unlink(True)
         shutil.rmtree(INSTALL_DIR)
-        print("> cleaned old build files\n")
+        _print("> cleaned old build files\n")
 
 def _get_time(s: float|int) -> str:
     if s < 60:
@@ -76,18 +119,24 @@ def _get_time(s: float|int) -> str:
     idx = min(len(units), idx)
     return f"{int(s)}{units[idx]} {int(60 * (s - int(s)))}{units[idx - 1]}"
 
-print(f"> compiling svedit with build.py v{BUILD_SCRIPT_VERSION} (this might take a while!)")
+_print(f"> compiling svedit v{VERSION} ({VERSION_NAME}) (this might take a while!)")
 start = time.time()
 result = _build()
 
 if result.returncode != 0:
+    if BUILD_ONLY_MODE or shutil.which("pipx") is None:
+        print("error: build failed")
+        sys.exit(1)
+
     print("warn: build failed, attempting correction.")
-    if (input("> if you're using pipx, try injecting pyyaml into nuitka venv? [Y/n] ")
-            .lower().strip() in ("y", "yes", "")):
+    if _get_confirmation("if you're using pipx nuitka, try injecting pyyaml into nuitka venv?"):
+        _print("> ensuring pipx venv is in path")
         run(["pipx", "ensurepath"])
+        _print("> injecting pyyaml into nuitka venv")
         result = run(["pipx", "inject", "nuitka", "pyyaml"])
         if result.returncode != 0:
             print("error: injection failed.")
+            sys.exit(1)
         result = _build()
         if result.returncode != 0:
             print("error: build failed.")
@@ -107,7 +156,25 @@ if not DIST_DIR.exists() or not BUILD_DIR.exists():
         print(f"       {BUILD_DIR} was not found.")
     sys.exit(1)
 
-print(f"> installing to {INSTALL_DIR}")
+if BUILD_ONLY_MODE:
+    if (DIST_DIR / "fmts").exists():
+        _print(f"> removing old {DIST_DIR}/fmts directory")
+        shutil.rmtree(DIST_DIR / "fmts")
+
+    _print(f"> copying fmts to {DIST_DIR}/fmts")
+    shutil.copytree(SRC_FMTS_DIR, DIST_DIR / "fmts")
+
+    _print(f"> copying icon to {DIST_DIR}")
+    shutil.copy(SRC_DIR / "svedit.png", DIST_DIR)
+
+    if run([f"./{DIST_DIR}/svedit.bin", "-h"]).returncode != 0:
+        print("error: build failed!")
+        sys.exit(1)
+
+    print("> build successful!")
+    sys.exit(0)
+
+_print(f"> installing to {INSTALL_DIR}")
 INSTALL_DIR.mkdir(parents=True, exist_ok=True)
 BIN_DIR.mkdir(parents=True, exist_ok=True)
 DESKTOP_DIR.mkdir(parents=True, exist_ok=True)
@@ -124,7 +191,7 @@ symlink_path.symlink_to(INSTALL_DIR / "svedit.bin")
 icon_file = INSTALL_DIR / "svedit.png"
 icon_path = str(icon_file) if icon_file.exists() else "utilities-terminal"
 
-print(f"\n> creating desktop entry in {DESKTOP_DIR}")
+_print(f"\n> creating desktop entry in {DESKTOP_DIR}")
 desktop_content = f"""[Desktop Entry]
 Version=1.0
 Name=svedit
@@ -139,15 +206,15 @@ Categories=Utility;
 desktop_file = DESKTOP_DIR / "svedit.desktop"
 desktop_file.write_text(desktop_content)
 
-if input("> update desktop database and icon cache? [Y/n] ").lower().strip() in ("y", "yes", ""):
-    print("> updating desktop database")
+if _get_confirmation("update desktop database and icon cache?"):
+    _print("> updating desktop database")
     run("update-desktop-database")
-    print("> updating icon cache")
+    _print("> updating icon cache")
     run("gtk-update-icon-cache")
 
-if input("\n> remove temporary build files? [Y/n] ").lower().strip() in ("y", "yes", ""):
+if _get_confirmation("remove temporary build files?"):
     _clean()
-    print("> build files removed")
+    _print("> build files removed")
 
 if run(["svedit", "-h"]).returncode != 0:
     print("\n> install failed!")
