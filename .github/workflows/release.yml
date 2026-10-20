@@ -1,0 +1,88 @@
+name: build svedit
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "release version"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: build svedit for linux
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: check out repository
+        uses: actions/checkout@v4
+
+      - name: set up python v3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y patchelf ccache
+
+      - name: set up python venv
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install --upgrade pip
+          .venv/bin/python -m pip install nuitka pyyaml
+
+      - name: configure ccache
+        run: |
+          echo "CCACHE_DIR=$HOME/.cache/ccache" >> "$GITHUB_ENV"
+          mkdir -p "$HOME/.cache/ccache"
+
+      - name: restore ccache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-linux-x86_64-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ccache-linux-x86_64-
+
+      - name: limit ccache size
+        run: ccache --max-size=500M
+
+      - name: build svedit
+        run: |
+          export PATH="$PWD/.venv/bin:$PATH"
+          python build.py --buildonly
+
+      - name: show ccache statistics
+        if: always()
+        run: ccache --show-stats
+
+      - name: save ccache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-linux-x86_64-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: package release
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          mkdir -p release/svedit
+          cp -a svedit.dist/. release/svedit/
+          tar -czf "svedit-${VERSION}-linux-x86_64.tar.gz" \
+            -C release svedit
+
+      - name: publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          gh release create "v${VERSION}" \
+            "svedit-${VERSION}-linux-x86_64.tar.gz" \
+            --title "svedit v${VERSION}" \
+            --generate-notes
