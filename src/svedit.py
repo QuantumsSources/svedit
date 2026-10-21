@@ -145,7 +145,10 @@ def is_psx_mcd(file: str) -> tuple[list[str], list[str]]:
     return fatal, nonfatal
 
 def main(mods: dict, kwargs: dict, files: list):
+    empty_launch = False
     if not mods and not kwargs and not files:
+        empty_launch = True
+
         warn("No files passed. See usage below:")
         mods["h"] = True
 
@@ -171,6 +174,10 @@ def main(mods: dict, kwargs: dict, files: list):
         info(f"made with {colors.FG_RED_EX}❤{colors.RESET}︎ by quantum")
         info(f"svedit is {colors.FG_RED_EX}free-and-open-source software{colors.RESET},")
         info(f"  licensed under {colors.FG_YELLOW_EX}GNU GPLv3 (or later){colors.RESET}!")
+        if empty_launch:
+            warn()
+            warn("if you've launched svedit from your application list, that feature yet added!")
+            input()
         return
 
     if kwargs.get("fmts", None):
