@@ -176,7 +176,7 @@ def main(mods: dict, kwargs: dict, files: list):
         info(f"  licensed under {colors.FG_YELLOW_EX}GNU GPLv3 (or later){colors.RESET}!")
         if empty_launch:
             warn()
-            warn("if you've launched svedit from your application list, that feature yet added!")
+            warn("if you've launched svedit from your application list, that feature isn't yet added!")
             input()
         return
 
@@ -224,7 +224,7 @@ def main(mods: dict, kwargs: dict, files: list):
         except db.NoInternetError:
             err("Check your internet connection! Will retry download on next launch!")
             info("Note: If you don't want svedit to download the game database for you:")
-            info(f"      1. Download {cmn.DATABASE_URL};")
+            info(f"      1. Download {core.DATABASE_URL};")
             info(f"      2. Place the downloaded file here: {core.YAML_PATH.absolute()};")
             info(f"      3. Launch svedit again;")
             return
@@ -241,7 +241,7 @@ def main(mods: dict, kwargs: dict, files: list):
                 except db.NoInternetError:
                     err("Check your internet connection! Will retry download on next launch!")
                     info("Note: If you don't want svedit to download the game database for you:")
-                    info(f"      1. Download {cmn.DATABASE_URL};")
+                    info(f"      1. Download {core.DATABASE_URL};")
                     info(f"      2. Place the downloaded file here: {core.YAML_PATH.absolute()};")
                     info(f"      3. Launch svedit again;")
                     return
