@@ -216,14 +216,19 @@ if _get_confirmation("remove temporary build files?"):
     _clean()
     _print("> build files removed")
 
-if run([f"./{INSTALL_DIR}/svedit.bin", "-h"]).returncode != 0:
-    print("\n> install failed on share, error below:")
-    run([f"./{INSTALL_DIR}/svedit.bin", "-h"], show_output=True)
-    sys.exit(1)
+try:
+    if run([f"{INSTALL_DIR}/svedit.bin", "-h"]).returncode != 0:
+        print("\n> install failed on share, error below:")
+        run([f"./{INSTALL_DIR}/svedit.bin", "-h"], show_output=True)
+        sys.exit(1)
 
-if run([f"./{BIN_DIR}/svedit", "-h"]).returncode != 0:
-    print("\n> install failed on bin, error below:")
-    run([f"./{BIN_DIR}/svedit", "-h"], show_output=True)
+    if run([f"{BIN_DIR}/svedit", "-h"]).returncode != 0:
+        print("\n> install failed on bin, error below:")
+        run([f"./{BIN_DIR}/svedit", "-h"], show_output=True)
+        sys.exit(1)
+except Exception as e:
+    print("error: an error occurred while testing launch")
+    print(f"error: {e}")
     sys.exit(1)
 
 print(f"\n> svedit successfully installed svedit v{VERSION} ({VERSION_NAME})!")
