@@ -93,7 +93,7 @@ class MCDStruct:
         self.display = struct_type
 
 class MCDSaveFilePath:
-    def __init__(self, a: str|int|list[str|int]|tuple[str|int]|MCDSaveFilePath):
+    def __init__(self, a: str|int|list[str|int]|tuple[str|int]|"MCDSaveFilePath"):
         if isinstance(a, MCDSaveFilePath):
             self.parts = list[str](a.parts)
         elif isinstance(a, str):
