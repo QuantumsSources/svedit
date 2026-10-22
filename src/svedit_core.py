@@ -1,6 +1,6 @@
 from pathlib import Path
 
-VERSION = "1.3.3α"
+VERSION = "1.3.3+1α"
 VERSION_NAME = "Bison"
 MIN_SIZE = (80, 27)
 

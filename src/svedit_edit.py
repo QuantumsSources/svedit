@@ -6,7 +6,7 @@ import svedit_core as core
 import svedit_commons as cmn
 
 from pathlib import Path
-from typing import Any, TypeAlias
+from typing import Any, TypeAlias, Union
 from xml.etree import ElementTree
 from MCDTypes import MCDBlock, MCDReader, MCDWriter
 from ansicodelib import ANSIBuffer as buf, ANSICursor as cur, ANSIColors as colors
@@ -93,7 +93,7 @@ class MCDStruct:
         self.display = struct_type
 
 class MCDSaveFilePath:
-    def __init__(self, a: str|int|list[str|int]|tuple[str|int]|"MCDSaveFilePath"):
+    def __init__(self, a: Union[str, int, list[Union[str, int]], tuple[Union[str, int]], "MCDSaveFilePath"]):
         if isinstance(a, MCDSaveFilePath):
             self.parts = list[str](a.parts)
         elif isinstance(a, str):
