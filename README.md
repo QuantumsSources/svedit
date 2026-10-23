@@ -63,10 +63,6 @@ interface!
 </div>
 
 ## Installation
-> [!note]
-> Currently, `svedit` **doesn't come with prebuilt releases**.\
-> This is planned for the (hopefully close) future!
-
 > [!important]
 > Currently, `svedit` only works on **Linux and Android**<sub>(through Termux)</sub>.\
 > This is due to the program's use of Python's `termios` and `tty` libraries, which are only available
@@ -76,13 +72,29 @@ on Unix-based systems.
 > A native macOS release will depend solely on contributions or community forks.
 
 ### Prerequisites
-To install and build `svedit`, you'll need...
+To install or build `svedit`, you'll need...
 1. python 3.10+ (3.12+ recommended);
 2. nuitka (arch: `yay -S nuitka`, deb: `sudo apt install nuitka`, etc...);
 3. pyyaml (arch: `sudo pacman -S python-yaml`, deb: `sudo apt install python3-yaml`, etc...)
 
 ### Instructions
-After installing the dependencies above...
+After installing the dependencies above, you can...
+
+#### Download prebuilt release
+1. Head over to the "Releases" page on the side (or above if you're on GitHub mobile);
+2. Download `svedit-{...}.tar.gz` from that page;
+3. Unpackage it and run `svedit.bin`.
+
+> [!note]
+> `svedit`'s prebuilt release doesn't automatically link the binary to your `~/.local/bin` folder.
+> 
+> To do so, you can `link` the `svedit.bin` file to `~/.local/bin/svedit`:
+> ```bash
+> # In the unpacked release folder
+> link svedit.bin ~/.local/share/svedit
+> ```
+
+#### Build from source
 1. Clone this repository;
 ```bash
 git clone https://github.com/QuantumsSources/svedit.git
