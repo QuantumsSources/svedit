@@ -71,7 +71,7 @@ def get_db(force_redownload: Any = None, custom_url: str|None = None) -> dict[st
         _clean()
         raise IncompleteUpdateError
 
-def get_db_entry(db: dict[Any, Any]|None, product: str|None) -> DSDatabaseEntry|None:
+def get_db_entry(db: dict[Any, Any]|None, product: str|None) -> DSDatabaseEntry:
     if db is None or product is None:
-        return None
+        return DSDatabaseEntry({ })
     return DSDatabaseEntry(db.get(product, { }))

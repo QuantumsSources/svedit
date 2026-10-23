@@ -27,7 +27,7 @@ class CardPicker:
         self.mcd_file_path = file_path
         self.mcd = MCDFile(self.mcd_file_path)
 
-        self.game_db: dict|None = None
+        self.game_db: dict = { }
         self.selected_block = selected_block
 
         self.current_col_off = 0
@@ -121,11 +121,6 @@ class CardPicker:
                         cur.cur_goto(px + card_width + 1, py + 3)
                         rel_date = g_data.release_date
                         buf.buf_write(f"released {colors.BOLD}{rel_date}{colors.RESET}")
-                    else:
-                        buf.buf_write(f"Could not fetch metadata for game")
-                        cur.cur_goto(px + card_width + 1, py + 2)
-                        buf.buf_write(f"{colors.BOLD}{frame.ProductCode}{colors.RESET}!")
-                        cur.cur_goto(px + card_width + 1, py + 3)
                 elif self.current_page == 1:
                     cur.cur_goto(px + card_width + 1, py + 1)
                     buf.buf_write(f"Product: {colors.BOLD}{frame.ProductCode}{colors.RESET}")
@@ -280,16 +275,16 @@ class CardPicker:
         except db.IncompleteUpdateError:
             buf.buf_disable_alt()
             cur.cur_show()
-            cmn.err("Download incomplete! Will retry on next launch!")
+            core.err("Download incomplete! Will retry on next launch!")
             return None
-        except cmn.NoInternetError:
+        except db.NoInternetError:
             buf.buf_disable_alt()
             cur.cur_show()
-            cmn.err("Check your internet connection! Will retry download on next launch!")
-            cmn.err("Note: If you don't want svedit to download the game database for you:")
-            cmn.err(f"      1. Download {cmn.DATABASE_URL};")
-            cmn.err(f"      2. Place the downloaded file here: {core.YAML_PATH.absolute()};")
-            cmn.err(f"      3. Launch svedit again;")
+            core.err("Check your internet connection! Will retry download on next launch!")
+            core.err("Note: If you don't want svedit to download the game database for you:")
+            core.err(f"      1. Download {core.DATABASE_URL};")
+            core.err(f"      2. Place the downloaded file here: {core.YAML_PATH.absolute()};")
+            core.err(f"      3. Launch svedit again;")
             return None
 
         try:

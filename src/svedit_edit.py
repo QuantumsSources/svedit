@@ -6,7 +6,7 @@ import svedit_core as core
 import svedit_commons as cmn
 
 from pathlib import Path
-from typing import Any, TypeAlias, Union
+from typing import Any, TypeAlias
 from xml.etree import ElementTree
 from MCDTypes import MCDBlock, MCDReader, MCDWriter
 from ansicodelib import ANSIBuffer as buf, ANSICursor as cur, ANSIColors as colors
@@ -93,7 +93,7 @@ class MCDStruct:
         self.display = struct_type
 
 class MCDSaveFilePath:
-    def __init__(self, a: Union[str, int, list[Union[str, int]], tuple[Union[str, int]], "MCDSaveFilePath"]):
+    def __init__(self, a):
         if isinstance(a, MCDSaveFilePath):
             self.parts = list[str](a.parts)
         elif isinstance(a, str):
@@ -114,7 +114,7 @@ class MCDSaveFilePath:
     def __iter__(self):
         return iter(self.parts)
 
-    def __truediv__(self, other) -> MCDSaveFilePath:
+    def __truediv__(self, other) -> "MCDSaveFilePath":
         new_parts = list(self.parts)
 
         if isinstance(other, MCDSaveFilePath):
@@ -537,7 +537,7 @@ class MCDSaveFile:
 
     @property
     def Unfinished(self):
-        return self._root.attrib.get("unfinished").lower() in ("true", "1")
+        return self._root.attrib.get("unfinished", "").lower() in ("true", "1")
 
     def GetFileEntry(self, path: ValidSaveFilePath) -> ElementTree.Element:
         path = MCDSaveFilePath(path)
@@ -747,7 +747,7 @@ class MCDFileEditor:
             self._content = {}
 
         self._pretty_content: list[tuple[str, MCDSaveFilePath, bool, bool]] = []
-        self._collapsed_paths: set[MCDSaveFil_save_fileePath] = set()
+        self._collapsed_paths: set[MCDSaveFilePath] = set()
         self._current_line = 0
         self._win_off = 0
 
@@ -1302,7 +1302,7 @@ class MCDFileEditor:
             cur.cur_show()
             core.err("Download incomplete! Will retry on next launch!")
             return
-        except cmn.NoInternetError:
+        except db.NoInternetError:
             buf.buf_disable_alt()
             cur.cur_show()
             core.err("Check your internet connection! Will retry download on next launch!")
