@@ -72,14 +72,12 @@ on Unix-based systems.
 > A native macOS release will depend solely on contributions or community forks.
 
 ### Prerequisites
-To install or build `svedit`, you'll need...
+To build `svedit`, you'll need...
 1. python 3.10+ (3.12+ recommended);
 2. nuitka (arch: `yay -S nuitka`, deb: `sudo apt install nuitka`, etc...);
 3. pyyaml (arch: `sudo pacman -S python-yaml`, deb: `sudo apt install python3-yaml`, etc...)
 
 ### Instructions
-After installing the dependencies above, you can...
-
 #### Download prebuilt release
 1. Head over to the "Releases" page on the side (or above if you're on GitHub mobile);
 2. Download `svedit-{...}.tar.gz` from that page;
@@ -91,10 +89,12 @@ After installing the dependencies above, you can...
 > To do so, you can `link` the `svedit.bin` file to `~/.local/bin/svedit`:
 > ```bash
 > # In the unpacked release folder
-> link svedit.bin ~/.local/share/svedit
+> link svedit.bin ~/.local/bin/svedit
 > ```
 
 #### Build from source
+After installing the dependencies above, you can...
+
 1. Clone this repository;
 ```bash
 git clone https://github.com/QuantumsSources/svedit.git
