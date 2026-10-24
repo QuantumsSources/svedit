@@ -8,19 +8,21 @@ from pathlib import Path
 from subprocess import CompletedProcess
 from src.svedit_core import VERSION, VERSION_NAME
 
-BUILD_SCRIPT_VERSION = "1.4"
+BUILD_SCRIPT_VERSION = "1.5"
 
 argv = sys.argv[1:]
 QUIET_MODE = "--quiet" in argv
 BUILD_ONLY_MODE = "--buildonly" in argv
+SKIP_BUILD_MODE = "--skipbuild" in argv
 NO_CONFIRMATION_MODE = "--yes" in argv
 
 if "--help" in sys.argv[1:]:
     print("> running with:")
-    print(">    '--help' will: print this help message and exit early;")
-    print(">    '--buildonly' will: only build svedit, not install it;")
-    print(">    '--yes' will: not ask for confirmation at any point;")
-    print(">                  (be sure you know everything this script will do!)")
+    print(">    '--help' will print this help message and exit early;")
+    print(">    '--buildonly' will only build svedit, not install it;")
+    print(">    '--skipbuild' will not build svedit, just install it;")
+    print(">    '--yes' will not ask for confirmation at any point;")
+    print(">            (not recommended!)")
     sys.exit(0)
 
 def _print(s: str) -> None:
@@ -36,11 +38,25 @@ if QUIET_MODE:
     print("> - print reduced information;")
 if BUILD_ONLY_MODE:
     print("> - only build svedit, not install it;")
+elif SKIP_BUILD_MODE:
+    print("> - only install svedit, not build it;")
 else:
     print("> - build and install svedit;")
 
-def run(args: str|list[str], show_output: bool = False) -> CompletedProcess:
-    return subprocess.run(args, stderr=subprocess.DEVNULL if not show_output else None)
+def run(args: str|Path|list[str|Path], show_output: bool = False, sudo: bool = False) -> CompletedProcess:
+    if isinstance(args, (str, Path)):
+        args = [args]
+    args = list[str](map(str, args))
+    if sudo:
+        print(f"warn: running {' '.join(map(str, args))} as sudo!")
+        _args = ["sudo", "-k", "-p", "      password: "]
+        _args.extend(args)
+        args = _args
+        show_output = True
+    return subprocess.run(args,
+        stdout=subprocess.DEVNULL if not show_output else None,
+        stderr=subprocess.DEVNULL if not show_output else None
+    )
 
 if sys.platform not in ("linux", "android"):
     print("error: currently svedit only works on linux!")
@@ -62,7 +78,8 @@ def _clean():
         shutil.rmtree(Path("svedit.build"))
 
 os.chdir(Path(__file__).resolve().parent)
-_clean()
+if not SKIP_BUILD_MODE:
+    _clean()
 
 result = run(["killall", "svedit"])
 if result.returncode == 0:
@@ -84,42 +101,68 @@ if not BUILD_TARGET.exists():
     sys.exit(1)
 
 def _build() -> CompletedProcess:
-    cmd = ["nuitka", "--mode=standalone", "--include-package=yaml", str(BUILD_TARGET)]
+    if SKIP_BUILD_MODE:
+        return CompletedProcess(
+            ["echo"], 0,
+            "> this would build svedit. (skipped due to --skipbuild)\n", ""
+        )
+
+    build_cmd = ["nuitka", "--mode=standalone", "--include-package=yaml", str(BUILD_TARGET)]
     try:
-        return subprocess.run(cmd, stderr=subprocess.DEVNULL if QUIET_MODE else None)
+        start_time = time.time()
+        process = subprocess.Popen(
+            build_cmd,
+            stdout=subprocess.PIPE if QUIET_MODE else subprocess.DEVNULL,
+            stderr=subprocess.STDOUT if QUIET_MODE else None,
+            text=True
+        )
+
+        if QUIET_MODE:
+            while process.poll() is None:
+                elapsed = time.time() - start_time
+                print(f"\r> building svedit... {_get_time(elapsed)} elapsed", end="", flush=True)
+                time.sleep(0.1)
+
+        stdout, stderr = process.communicate()
+        if QUIET_MODE:
+            print()
+        if process.returncode != 0 and QUIET_MODE and stdout:
+            print(stdout)
+        return CompletedProcess(build_cmd, process.returncode, stdout, stderr)
     except KeyboardInterrupt:
         print("\nerror: build interrupted!")
         sys.exit(1)
 
-def _get_confirmation(prompt: str) -> bool:
+def _get_confirmation(prompt: str, accept_empty: bool = True) -> bool:
     if NO_CONFIRMATION_MODE:
         _print(f"> {prompt} (auto accepted with --yes)")
         return True
 
+    suffix = "[Y/n]" if accept_empty else "[y/N]"
+    accept = ("y", "yes", "") if accept_empty else ("y", "yes")
     try:
-        return input(f"{prompt} [Y/n] ") in ("y", "yes", "")
+        return input(f"{prompt} {suffix} ") in accept
     except KeyboardInterrupt:
         print("\nerror: interrupt signal received!")
         sys.exit(1)
 
-if not BUILD_ONLY_MODE and INSTALL_DIR.exists():
+if not BUILD_ONLY_MODE and not SKIP_BUILD_MODE and INSTALL_DIR.exists():
     if _get_confirmation(f"clean old build files? ({INSTALL_DIR})"):
         (BIN_DIR / "selfhex.bin").unlink(True)
         shutil.rmtree(INSTALL_DIR)
         _print("> cleaned old build files\n")
 
 def _get_time(s: float|int) -> str:
+    s = int(s)
     if s < 60:
-        return f"{s:.2f}s"
-    units = ["s", "m", "h"]
-    idx = 0
-    while s > 60:
-        s = s / 60
-        idx += 1
-    idx = min(len(units), idx)
-    return f"{int(s)}{units[idx]} {int(60 * (s - int(s)))}{units[idx - 1]}"
+        return f"{s}s"
+    m, s = divmod(s, 60)
+    if m < 60:
+        return f"{m}m {s}s"
+    h, m = divmod(m, 60)
+    return f"{h}h {m}m {s}s"
 
-_print(f"> compiling svedit v{VERSION} ({VERSION_NAME}) (this might take a while!)")
+print(f"> compiling svedit v{VERSION} ({VERSION_NAME}) (this might take a while!)")
 start = time.time()
 result = _build()
 
@@ -192,7 +235,8 @@ icon_file = INSTALL_DIR / "svedit.png"
 icon_path = str(icon_file) if icon_file.exists() else "utilities-terminal"
 
 _print(f"\n> creating desktop entry in {DESKTOP_DIR}")
-desktop_content = f"""[Desktop Entry]
+desktop_content = f"""\
+[Desktop Entry]
 Version=1.0
 Name=svedit
 Comment=Global PlayStation© 1 Save Viewer/Editor
@@ -212,24 +256,64 @@ if _get_confirmation("update desktop database and icon cache?"):
     _print("> updating icon cache")
     run("gtk-update-icon-cache")
 
-if _get_confirmation("remove temporary build files?"):
+if _get_confirmation("remove temporary build files?", False):
     _clean()
     _print("> build files removed")
 
 try:
     if run([f"{INSTALL_DIR}/svedit.bin", "-h"]).returncode != 0:
         print("\n> install failed on share, error below:")
-        run([f"./{INSTALL_DIR}/svedit.bin", "-h"], show_output=True)
+        run([f"{INSTALL_DIR}/svedit.bin", "-h"], show_output=True)
         sys.exit(1)
 
     if run([f"{BIN_DIR}/svedit", "-h"]).returncode != 0:
         print("\n> install failed on bin, error below:")
-        run([f"./{BIN_DIR}/svedit", "-h"], show_output=True)
+        run([f"{BIN_DIR}/svedit", "-h"], show_output=True)
         sys.exit(1)
 except Exception as e:
     print("error: an error occurred while testing launch")
     print(f"error: {e}")
     sys.exit(1)
 
-print(f"\n> svedit successfully installed svedit v{VERSION} ({VERSION_NAME})!")
+if _get_confirmation(f"install globally to /usr/bin and /usr/share?"):
+    ROOT_BIN_DIR = Path("/usr/bin")
+    ROOT_SHARE_DIR = Path("/usr/share") / "svedit"
+
+    try:
+        print(f"copying {INSTALL_DIR} to {ROOT_SHARE_DIR}")
+        if run(["cp", "-r", INSTALL_DIR, ROOT_SHARE_DIR], sudo=True).returncode != 0:
+            raise OSError(f"Failed to copy {INSTALL_DIR} to {ROOT_SHARE_DIR}")
+        _print("> copy complete")
+
+        print(f"creating symlink from {ROOT_SHARE_DIR / 'svedit.bin'} to {ROOT_BIN_DIR / 'svedit'}")
+        if (ROOT_BIN_DIR / "svedit").exists():
+            print(f"warn: file named svedit found in {ROOT_BIN_DIR}")
+            if (ROOT_BIN_DIR / "svedit").is_symlink():
+                run(["unlink", ROOT_BIN_DIR / "svedit"], sudo=True)
+            else:
+                run(["rm", ROOT_BIN_DIR / "svedit"], sudo=True)
+            print()
+
+        link_cmd = ["ln", "-s", ROOT_SHARE_DIR / "svedit.bin", ROOT_BIN_DIR / "svedit"]
+        if run(link_cmd, sudo=True).returncode != 0:
+            raise OSError(f"Failed to create symlink at {ROOT_BIN_DIR / 'svedit'}")
+        _print("> symlink created")
+    except OSError as e:
+        print(f"error: an error occurred during global install: {e}")
+        print("       reverting changes to /usr/!")
+        if (ROOT_BIN_DIR / "svedit").exists():
+            if (ROOT_BIN_DIR / "svedit").is_symlink():
+                run(["unlink", ROOT_BIN_DIR / "svedit"], sudo=True)
+                print(f"warn: unlinked {ROOT_BIN_DIR / 'svedit'}")
+            elif _get_confirmation(f"found file 'svedit' in {ROOT_BIN_DIR}, but isn't a symlink. remove?"):
+                run(["rm", ROOT_BIN_DIR / "svedit"], sudo=True)
+                print(f"warn: removed {ROOT_BIN_DIR / 'svedit'}")
+
+        if ROOT_SHARE_DIR.exists():
+            run(["rm", "-r", ROOT_SHARE_DIR], sudo=True)
+            print(f"warn: removed {ROOT_SHARE_DIR}")
+
+        sys.exit(1)
+
+print(f"\n> successfully installed svedit v{VERSION} ({VERSION_NAME})!")
 print("> see usage with 'svedit --help'")
