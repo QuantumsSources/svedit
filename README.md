@@ -20,6 +20,13 @@ Made with ♥ by quantum.
 ## Features
 ### Intuitive UI, built with UX in mind
 - `svedit` features an intuitive, easy to use, terminal interface.
+
+<div align="center">
+<img src="readme/desktop_example.png" width="600" alt="svedit's desktop mode interface"/>
+<br>
+<sub><b>Figure 2:</b>: svedit's "desktop mode" interface</sub>
+</div>
+
 - Quickly take a glance at any relevant metadata in your memory card, before diving into the save editor.
 - It will also automatically download everything it needs to run on first startup (see below).
 - Additionally, `svedit` makes it super easy to get started with collaboration!
@@ -27,7 +34,7 @@ Made with ♥ by quantum.
 <div align="center">
 <img src="readme/edit_example.png" width="600" alt="svedit's editor interface">
 <br>
-<sub><b>Figure 2</b>: svedit's editor interface, editing Castlevania - Symphony of the Night</sub>
+<sub><b>Figure 3</b>: svedit's editor interface, editing Castlevania - Symphony of the Night</sub>
 </div>
 
 > [!note]
@@ -47,7 +54,7 @@ by default;
 > <div align="center">
 > <img src="readme/dl_example.png" width="750" alt="svedit downloading the PlayStation© game database">
 > <br>
-> <sub><b>Figure 3</b>: svedit downloading the PlayStation© game database</sub>
+> <sub><b>Figure 4</b>: svedit downloading the PlayStation© game database</sub>
 > </div>
 
 ### Built for collaboration
@@ -59,7 +66,7 @@ interface!
 <div align="center">
 <img src="readme/fmts_example.png" width="500" alt="svedit's supported formats">
 <br>
-<sub><b>Figure 4</b>: svedit's current (12/06/26) list of supported formats (Help expand it!)</sub>
+<sub><b>Figure 5</b>: svedit's current (12/06/26) list of supported formats (Help expand it!)</sub>
 </div>
 
 ## Installation
@@ -131,7 +138,7 @@ I also recommend reading over the documentation of the XML structure `svedit` ex
 <div align="center">
 <img src="readme/xml_example.png" width="600" alt="editing DRAX.xml">
 <br>
-<sub><b>Figure 5</b>: Editing <code>DRAX.xml</code>. Note the XML structure.</sub>
+<sub><b>Figure 6</b>: Editing <code>DRAX.xml</code>. Note the XML structure.</sub>
 </div>
 
 Once you've decided to start (again, **thank you**!), do this:
