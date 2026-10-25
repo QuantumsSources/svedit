@@ -1,7 +1,7 @@
 from pathlib import Path
 
-VERSION = "1.3.3+2α"
-VERSION_NAME = "Bison"
+VERSION = "1.4"
+VERSION_NAME = "Crocodile"
 MIN_SIZE = (80, 27)
 
 # Thanks DuckStation!
@@ -29,3 +29,8 @@ def warn(*s: object, sep: str = " ") -> None:
 
 def err(*s: object, sep: str = " ") -> None:
     print(f"svedit \033[0;91m(ERROR)\033[0m: {sep.join(map(str, s))}")
+
+class UserExitCommand(Exception):
+    def __init__(self, *args: object, delta: int = 1):
+        super().__init__(args)
+        self.delta = delta

@@ -1,6 +1,7 @@
 import os
 import re
 import sys
+import subprocess
 import svedit_db as db
 import svedit_core as core
 import svedit_commons as cmn
@@ -8,9 +9,10 @@ import svedit_commons as cmn
 from pathlib import Path
 from types import TracebackType
 from svedit_pick import CardPicker
-from svedit_core import info, warn, err
+from svedit_edit import MCDFileEditor
+from svedit_desktop import SvEditDesktop
 from ansicodelib import ANSIColors as colors
-from svedit_edit import MCDFileEditor, UserExitCommand
+from svedit_core import info, warn, err, UserExitCommand
 
 class ArgumentParserError(Exception):
     """Base class for argument parser errors."""
@@ -26,10 +28,10 @@ class UnnamedArgError(ArgumentParserError):
 
 SPECIAL_MODS = {}
 
-def parse_args(args: list[str]) -> tuple[dict[str, str|bool], dict[str, str|int|float|bool|None], list[str]]:
+def parse_args(args: list[str]) -> tuple[dict[str, str|bool], dict[str, str|int|float|bool|None], list[Path]]:
     mods: dict[str, str|bool] = {}
     kwargs: dict[str, str|int|float|bool|None] = {}
-    files: list[str] = []
+    files: list[Path] = []
     waiting_on_file: str|None = None
 
     for arg in args:
@@ -89,7 +91,7 @@ def parse_args(args: list[str]) -> tuple[dict[str, str|bool], dict[str, str|int|
                 mods[waiting_on_file] = arg
                 waiting_on_file = None
             else:
-                files.append(arg)
+                files.append(Path(arg))
 
     if waiting_on_file is not None:
         raise UnfinishedModError(f"Expected file for mod '{waiting_on_file}', "
@@ -110,47 +112,19 @@ def get_pretty_tb(tb: TracebackType|None) -> list[str]:
         current = current.tb_next
     return result
 
-def xor_check(data: bytes) -> int:
-    checksum = 0
-    for byte in data:
-        checksum ^= byte
-    return checksum
-
-def is_psx_mcd(file: str) -> tuple[list[str], list[str]]:
-    fatal = []
-    nonfatal = []
-
+def get_term() -> str|None:
     try:
-        open(file, "rb").close()
-    except FileNotFoundError:
-        fatal.append(f"file {file} does not exist")
-        return fatal, nonfatal
+        shell_pid = os.getppid()
+        terminal_pid = subprocess.check_output(["ps", "-o", "ppid=", "-p", str(shell_pid)]).decode().strip()
+        terminal_name = subprocess.check_output(["ps", "-o", "comm=", "-p", terminal_pid]).decode().strip()
 
-    if file.rsplit(".")[-1] not in ("mcd", "psv", "vm1"):
-        nonfatal.append(f"file extension does not match recognized extensions")
+        return os.path.basename(terminal_name)
+    except Exception:
+        return None
 
-    with open(file, "rb") as f:
-        content = f.read()
-        size_match = len(content) == 0x20000
-        if not size_match:
-            fatal.append(f"target size mismatch (0x{len(content):X} vs 0x20000)")
-        magic_match = content.startswith(b'MC')
-        if not magic_match:
-            fatal.append(f"magic bytes mismatch ({content[0:2]} "
-                          f"vs b'MC')")
-        xor_match = xor_check(content[0:0x7E]) == content[0x7F]
-        if not xor_match:
-            fatal.append(f"xor check mismatch   (0x{content[0x7F]:X} "
-                          f"vs 0x{xor_check(content[0:0x7E]):X})")
-    return fatal, nonfatal
-
-def main(mods: dict, kwargs: dict, files: list):
-    empty_launch = False
+def main(mods: dict, kwargs: dict, files: list[Path]):
     if not mods and not kwargs and not files:
-        empty_launch = True
-
-        warn("No files passed. See usage below:")
-        mods["h"] = True
+        kwargs["desktop"] = True
 
     if mods.get("h", None) or kwargs.get("help", None):
         info(f"svedit {colors.FG_RED_EX}v{core.VERSION} ({core.VERSION_NAME}){colors.RESET}")
@@ -163,6 +137,8 @@ def main(mods: dict, kwargs: dict, files: list):
         info("KWARGS:")
         info(f":: {colors.FG_YELLOW_EX}--help{colors.RESET}: same as -h")
         info(f":: {colors.FG_YELLOW_EX}--force-dl{colors.RESET}: same as -d")
+        info(f":: {colors.FG_YELLOW_EX}--desktop{colors.RESET}: force run svedit in desktop mode")
+        info(f":: {colors.FG_YELLOW_EX}  (assumed if no mods, kwargs, or files are passed.){colors.RESET}")
         info(f":: {colors.FG_YELLOW_EX}--db-src=<url>{colors.RESET}: change where to pull the database from")
         info(f":: {colors.FG_YELLOW_EX}  (it must be a .yaml file with a similar structure!){colors.RESET}")
         info(f":: {colors.FG_YELLOW_EX}--nocheck{colors.RESET}: assume valid file, skip checking")
@@ -174,25 +150,21 @@ def main(mods: dict, kwargs: dict, files: list):
         info(f"made with {colors.FG_RED_EX}❤{colors.RESET}︎ by quantum")
         info(f"svedit is {colors.FG_RED_EX}free-and-open-source software{colors.RESET},")
         info(f"  licensed under {colors.FG_YELLOW_EX}GNU GPLv3 (or later){colors.RESET}!")
-        if empty_launch:
-            warn()
-            warn("if you've launched svedit from your application list, that feature isn't yet added!")
-            input()
-        return
+        sys.exit(0)
 
     if kwargs.get("fmts", None):
         info("Available formats:")
         for pat, gen in cmn.mappings.items():
             contributor = cmn.contributors.get(pat, cmn.contributors.get(gen, None))
             info(f" [{pat}] => {gen}{f' (by {contributor})' if contributor is not None else ''}")
-        return
+        sys.exit(0)
 
     checking_fmt = kwargs.get("fmt-available", None)
     if checking_fmt is not None:
         checking_fmt = str(checking_fmt).strip()
         if not checking_fmt.strip():
             warn("Expected format for --fmt-available, got empty string")
-            return
+            sys.exit(1)
         for pat, gen in cmn.mappings.items():
             if re.match(pat, checking_fmt) or checking_fmt == gen:
                 info(f"Format {checking_fmt} is available under '{core.FORMATS_PATH}/{gen}.xml' "
@@ -200,9 +172,9 @@ def main(mods: dict, kwargs: dict, files: list):
                 if pat in cmn.contributors.keys() or gen in cmn.contributors.keys():
                     contributor = cmn.contributors.get(pat, cmn.contributors.get(gen))
                     info(f"Thank you to {contributor} for providing this format!")
-                return
+                sys.exit(0)
         info(f"Format {checking_fmt} is not available under '{core.FORMATS_PATH}/'")
-        return
+        sys.exit(1)
 
     custom_url = kwargs.get("db-src", None)
     redownload = kwargs.get("force-dl", None) or mods.get("d", None)
@@ -210,24 +182,25 @@ def main(mods: dict, kwargs: dict, files: list):
     if custom_url:
         if not isinstance(custom_url, str):
             err(f"Expected 'db-src' to be 'str', got '{type(custom_url).__name__}' ({custom_url})")
-            return
+            sys.exit(1)
 
         try:
             db.get_db(True, custom_url)
         except ValueError:
             err(f"URL of unknown type '{custom_url}' passed into --db-src!")
             err("Double check your URL to ensure it is correct!")
-            return
+            sys.exit(1)
         except db.IncompleteUpdateError:
             err("Download cancelled! Will retry on next launch!")
-            return
+            sys.exit(1)
         except db.NoInternetError:
             err("Check your internet connection! Will retry download on next launch!")
             info("Note: If you don't want svedit to download the game database for you:")
             info(f"      1. Download {core.DATABASE_URL};")
             info(f"      2. Place the downloaded file here: {core.YAML_PATH.absolute()};")
             info(f"      3. Launch svedit again;")
-            return
+            sys.exit(1)
+        sys.exit(0)
     else:
         if redownload:
             if not files:
@@ -237,60 +210,121 @@ def main(mods: dict, kwargs: dict, files: list):
                     db.get_db(True)
                 except db.IncompleteUpdateError:
                     err("Download cancelled! Will retry on next launch!")
-                    return
+                    sys.exit(1)
                 except db.NoInternetError:
                     err("Check your internet connection! Will retry download on next launch!")
                     info("Note: If you don't want svedit to download the game database for you:")
                     info(f"      1. Download {core.DATABASE_URL};")
                     info(f"      2. Place the downloaded file here: {core.YAML_PATH.absolute()};")
                     info(f"      3. Launch svedit again;")
-                    return
+                    sys.exit(1)
                 info(f"Saved raw .yaml to '{core.YAML_PATH}'")
                 info(f"  and cached .pkl to '{core.PKL_PATH}'")
+                sys.exit(0)
             else:
                 if core.PKL_PATH.exists():
                     os.remove(core.PKL_PATH)
                 if core.YAML_PATH.exists():
                     os.remove(core.YAML_PATH)
 
-    if not files:
-        return
+    try:
+        os.get_terminal_size()
+    except OSError:
+        err("Could not get terminal size! Check your terminal and try again.")
+        terminal = get_term()
+        if terminal is not None:
+            err(f"You are using '{terminal}'.")
+        sys.exit(1)
 
-    skip_check = kwargs.get("nocheck", None)
-    if not skip_check:
-        file = files[0]
-        fatal, nonfatal = is_psx_mcd(file)
-        if nonfatal:
-            info(f"Your file may have non-crucial errors:")
-            for reason in nonfatal:
-                info(f"> {reason}")
-        if fatal:
-            err(f"'.../{file.rsplit('/')[-1]}' is not a valid 128KB PlayStation© Memory Card file!")
-            err(f"Here's what we know:")
-            for reason in fatal:
-                err(f"> {reason}")
-            return
+    is_desktop_mode = kwargs.get("desktop", None) is not None
+    opened_file = Path("~").expanduser() if not files else files[0]
 
     selected_block = 0
+    result = None
+
+    current_step = 2 if (is_desktop_mode and files) else (1 if is_desktop_mode else 2)
+    min_step = 1 if is_desktop_mode else 2
+
     while True:
         try:
-            picker = CardPicker(file=files[0], selected_block=selected_block)
-            result = picker.run()
+            if current_step == 1:
+                try:
+                    if opened_file.exists():
+                        opened_folder = opened_file if opened_file.is_dir() else opened_file.parent
+                    else:
+                        opened_folder = None
+
+                    file_path = SvEditDesktop(opened_folder).run()
+                    if file_path is None:
+                        sys.exit(0)
+                    opened_file = file_path
+                    files = [opened_file]
+                    current_step = 2
+                except UserExitCommand:
+                    sys.exit(0)
+            elif current_step == 2:
+                if not kwargs.get("nocheck", None):
+                    file = files[0]
+                    fatal, nonfatal = cmn.is_psx_mcd(Path(file))
+                    if nonfatal:
+                        info(f"Your file may have non-crucial errors:")
+                        for reason in nonfatal:
+                            info(f"> {reason}")
+                    if fatal:
+                        err(f"'.../{file.name}' is not a valid 128KB PlayStation© Memory Card file!")
+                        err(f"Here's what we know:")
+                        for reason in fatal:
+                            err(f"> {reason}")
+                        if is_desktop_mode:
+                            current_step = 1
+                            continue
+                        else:
+                            sys.exit(1)
+
+                try:
+                    picker = CardPicker(file=files[0], selected_block=selected_block)
+                    result = picker.run()
+                except FileNotFoundError:
+                    err(f"File '{files[0]}' does not exist!")
+                    sys.exit(1)
+                except KeyboardInterrupt:
+                    sys.exit(0)
+                except UserExitCommand as error:
+                    delta = getattr(error, "delta", 1)
+                    current_step -= delta
+                    if current_step < min_step:
+                        sys.exit(0)
+                    continue
+
+                if result is None:
+                    current_step -= 1
+                    if current_step < min_step:
+                        sys.exit(0)
+                    continue
+
+                selected_block = result.block_id
+                current_step = 3
+
+            elif current_step == 3:
+                try:
+                    if result is None:
+                        current_step -= 1
+                        continue
+                    viewer = MCDFileEditor(result, src_file=Path(files[0]))
+                    viewer.run()
+                    current_step -= 1
+                except UserExitCommand as error:
+                    delta = getattr(error, "delta", 1)
+                    current_step -= delta
+                except KeyboardInterrupt:
+                    sys.exit(0)
+                except cmn.UnknownFormatError:
+                    current_step -= 1
+
+                if current_step < min_step:
+                    sys.exit(0)
         except KeyboardInterrupt:
-            break
-
-        if result is not None:
-            selected_block = result.block_id
-
-            try:
-                viewer = MCDFileEditor(result, src_file=Path(files[0]))
-                viewer.run()
-            except UserExitCommand:
-                break
-            except KeyboardInterrupt:
-                break
-            except cmn.UnknownFormatError:
-                break
+            sys.exit(0)
 
 if __name__ == "__main__":
     try:

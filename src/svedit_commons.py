@@ -146,6 +146,40 @@ def draw_box(params: BoxDrawingParams):
         else:
             buf.buf_write(f"{bc}│{reset}{fc}{' ' * inner_w}{reset}{bc}│{reset}")
 
+def xor_check(data: bytes) -> int:
+    checksum = 0
+    for byte in data:
+        checksum ^= byte
+    return checksum
+
+def is_psx_mcd(path: Path) -> tuple[list[str], list[str]]:
+    fatal = []
+    nonfatal = []
+
+    try:
+        open(path, "rb").close()
+    except FileNotFoundError:
+        fatal.append(f"file {path} does not exist")
+        return fatal, nonfatal
+
+    if path.suffix not in (".mcd", ".psv", ".vm1"):
+        nonfatal.append(f"file extension does not match recognized extensions")
+
+    with open(path, "rb") as f:
+        content = f.read()
+        size_match = len(content) == 0x20000
+        if not size_match:
+            fatal.append(f"target size mismatch (0x{len(content):X} vs 0x20000)")
+            return fatal, nonfatal
+        magic_match = content.startswith(b'MC')
+        if not magic_match:
+            fatal.append(f"magic bytes mismatch ({content[0:2]} vs b'MC')")
+        xor_match = xor_check(content[0:0x7E]) == content[0x7F]
+        if not xor_match:
+            fatal.append(f"xor check mismatch   (0x{content[0x7F]:X} "
+                          f"vs 0x{xor_check(content[0:0x7E]):X})")
+    return fatal, nonfatal
+
 CONTRIBUTE_PY_TEMPLATE = """\
 \"""
 CONTRIBUTE-%fmt.py

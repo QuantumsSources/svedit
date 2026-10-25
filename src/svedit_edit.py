@@ -694,7 +694,7 @@ class MCDSaveFile:
         buf.buf_enable_alt()
 
         self.changes.clear()
-        raise UserExitCommand
+        raise core.UserExitCommand(delta=1)
 
 class Notification:
     def __init__(self, **kwargs):
@@ -711,9 +711,6 @@ class Notification:
             self.limit_choices: list[Any] = kwargs.get("valid_choices", [])
             self.choice_index: int = kwargs.get("choice_index", 0)
             self.input_text: str = str(kwargs.get("initial_value", ""))
-
-class UserExitCommand(Exception):
-    pass
 
 class MCDFileEditor:
     def __init__(self, block: MCDBlock, src_file: Path):
@@ -1171,9 +1168,9 @@ class MCDFileEditor:
                 if self.open_notifs:
                     self._close_notif()
                 else:
-                    raise KeyboardInterrupt
+                    raise core.UserExitCommand(delta=1)
             elif key == "\x1B":
-                raise UserExitCommand
+                raise core.UserExitCommand(delta=2)
             elif key in ("UP", "w", "W"):
                 if not self.open_notifs:
                     self._current_line -= 1
@@ -1218,7 +1215,7 @@ class MCDFileEditor:
                     core.info(f"Run to clone the repository and open {mapped_fmt}.xml in your code editor!")
                     buf.buf_enable_alt()
 
-                    raise UserExitCommand
+                    raise core.UserExitCommand(delta=99)
                 elif is_expandable:
                     if path in self._collapsed_paths:
                         self._collapsed_paths.remove(path)

@@ -8,7 +8,7 @@ from pathlib import Path
 from subprocess import CompletedProcess
 from src.svedit_core import VERSION, VERSION_NAME
 
-BUILD_SCRIPT_VERSION = "1.5"
+BUILD_SCRIPT_VERSION = "1.6"
 
 argv = sys.argv[1:]
 QUIET_MODE = "--quiet" in argv
@@ -95,6 +95,9 @@ BUILD_TARGET = SRC_DIR / "svedit.py"
 SRC_FMTS_DIR = Path("fmts")
 FMTS_DIR = Path(INSTALL_DIR / "fmts")
 
+ROOT_BIN_DIR = Path("/usr/bin")
+ROOT_SHARE_DIR = Path("/usr/share") / "svedit"
+
 if not BUILD_TARGET.exists():
     print(f"error: could not find build target at {BUILD_TARGET}")
     print(f"       make sure to be in directory {Path(__file__).resolve().parent} and try again")
@@ -141,16 +144,19 @@ def _get_confirmation(prompt: str, accept_empty: bool = True) -> bool:
     suffix = "[Y/n]" if accept_empty else "[y/N]"
     accept = ("y", "yes", "") if accept_empty else ("y", "yes")
     try:
-        return input(f"{prompt} {suffix} ") in accept
+        return input(f"> {prompt} {suffix} ") in accept
     except KeyboardInterrupt:
         print("\nerror: interrupt signal received!")
         sys.exit(1)
 
-if not BUILD_ONLY_MODE and not SKIP_BUILD_MODE and INSTALL_DIR.exists():
-    if _get_confirmation(f"clean old build files? ({INSTALL_DIR})"):
+if not BUILD_ONLY_MODE and not SKIP_BUILD_MODE:
+    if INSTALL_DIR.exists() and _get_confirmation(f"clean old build files? ({INSTALL_DIR})"):
         (BIN_DIR / "selfhex.bin").unlink(True)
         shutil.rmtree(INSTALL_DIR)
         _print("> cleaned old build files\n")
+    if (ROOT_BIN_DIR / "svedit").exists() and _get_confirmation(f"clean old global install?"):
+        run(["unlink", ROOT_BIN_DIR / "svedit"], sudo=True)
+        run(["rm", "-r", ROOT_SHARE_DIR], sudo=True)
 
 def _get_time(s: float|int) -> str:
     s = int(s)
@@ -240,7 +246,7 @@ desktop_content = f"""\
 Version=1.0
 Name=svedit
 Comment=Global PlayStation© 1 Save Viewer/Editor
-Exec={BIN_DIR / 'svedit'} %F
+Exec={BIN_DIR / 'svedit'}
 Icon={icon_path}
 Terminal=true
 Type=Application
@@ -275,24 +281,20 @@ except Exception as e:
     print(f"error: {e}")
     sys.exit(1)
 
-if _get_confirmation(f"install globally to /usr/bin and /usr/share?"):
-    ROOT_BIN_DIR = Path("/usr/bin")
-    ROOT_SHARE_DIR = Path("/usr/share") / "svedit"
-
+if _get_confirmation(f"install globally to /usr/share?"):
     try:
-        print(f"copying {INSTALL_DIR} to {ROOT_SHARE_DIR}")
+        print(f"> copying {INSTALL_DIR} to {ROOT_SHARE_DIR}")
         if run(["cp", "-r", INSTALL_DIR, ROOT_SHARE_DIR], sudo=True).returncode != 0:
             raise OSError(f"Failed to copy {INSTALL_DIR} to {ROOT_SHARE_DIR}")
-        _print("> copy complete")
+        _print("> copy complete\n")
 
-        print(f"creating symlink from {ROOT_SHARE_DIR / 'svedit.bin'} to {ROOT_BIN_DIR / 'svedit'}")
+        print(f"> creating symlink from {ROOT_SHARE_DIR / 'svedit.bin'} to {ROOT_BIN_DIR / 'svedit'}")
         if (ROOT_BIN_DIR / "svedit").exists():
             print(f"warn: file named svedit found in {ROOT_BIN_DIR}")
             if (ROOT_BIN_DIR / "svedit").is_symlink():
                 run(["unlink", ROOT_BIN_DIR / "svedit"], sudo=True)
             else:
                 run(["rm", ROOT_BIN_DIR / "svedit"], sudo=True)
-            print()
 
         link_cmd = ["ln", "-s", ROOT_SHARE_DIR / "svedit.bin", ROOT_BIN_DIR / "svedit"]
         if run(link_cmd, sudo=True).returncode != 0:

@@ -10,7 +10,7 @@ from pathlib import Path
 from ansicodelib import ANSIBuffer as buf, ANSICursor as cur, ANSIColors as colors
 
 class CardPicker:
-    def __init__(self, file: str, *, selected_block: int = 0):
+    def __init__(self, file: Path, *, selected_block: int = 0):
         self.running = False
         self.fits = False
         self.message = "Q to quit"
@@ -20,7 +20,7 @@ class CardPicker:
         except OSError:
             raise cmn.IncorrectTerminalError
 
-        file_path = Path(file)
+        file_path = file
         if not file_path.exists() or not file_path.is_file():
             raise FileNotFoundError
 
@@ -39,9 +39,6 @@ class CardPicker:
         for i, char in enumerate(text):
             cur.cur_goto(x, y + i)
             buf.buf_write(char)
-
-    def get_game_from_code(self, product_code: str) -> dict:
-        return self.game_db.get(product_code, { })
 
     def render(self):
         buf.buf_clear()
@@ -239,8 +236,10 @@ class CardPicker:
             self.current_frame = int(time.time() * 3) % len(current_block.icon_frames)
             self.current_col_off = int(sin(time.time()) * 20)
 
-        if key in ("q", "Q", "\x1B"):
-            raise KeyboardInterrupt
+        if key in ("q", "Q"):
+            raise core.UserExitCommand(delta=1)
+        elif key == "\x1B":
+            raise core.UserExitCommand(delta=2)
         elif key in ("RIGHT", "d", "D"):
             self.selected_block = (self.selected_block + 1) % 15
         elif key in ("LEFT", "a", "A"):
