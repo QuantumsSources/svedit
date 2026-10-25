@@ -24,7 +24,7 @@ Made with ♥ by quantum.
 <div align="center">
 <img src="readme/desktop_example.png" width="600" alt="svedit's desktop mode interface"/>
 <br>
-<sub><b>Figure 2:</b>: svedit's "desktop mode" interface</sub>
+<sub><b>Figure 2</b>: svedit's "desktop mode" interface</sub>
 </div>
 
 - Quickly take a glance at any relevant metadata in your memory card, before diving into the save editor.
