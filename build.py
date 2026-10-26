@@ -18,6 +18,7 @@ NO_CONFIRMATION_MODE = "--yes" in argv
 
 if "--help" in sys.argv[1:]:
     print("> running with:")
+    print(">    '--quiet' will print reduced information;")
     print(">    '--help' will print this help message and exit early;")
     print(">    '--buildonly' will only build svedit, not install it;")
     print(">    '--skipbuild' will not build svedit, just install it;")
@@ -85,7 +86,8 @@ result = run(["killall", "svedit"])
 if result.returncode == 0:
     _print("> killed previous svedit processes\n")
 
-HOME = Path.home()
+HOME = Path.home().resolve()
+LOCAL_DIR = HOME / ".svedit"
 INSTALL_DIR = HOME / ".local/share/svedit"
 BIN_DIR = HOME / ".local/bin"
 DESKTOP_DIR = HOME / ".local/share/applications"
@@ -93,7 +95,7 @@ DESKTOP_DIR = HOME / ".local/share/applications"
 SRC_DIR = Path("src")
 BUILD_TARGET = SRC_DIR / "svedit.py"
 SRC_FMTS_DIR = Path("fmts")
-FMTS_DIR = Path(INSTALL_DIR / "fmts")
+FMTS_DIR = Path(LOCAL_DIR / "fmts")
 
 ROOT_BIN_DIR = Path("/usr/bin")
 ROOT_SHARE_DIR = Path("/usr/share") / "svedit"
@@ -123,7 +125,7 @@ def _build() -> CompletedProcess:
         if QUIET_MODE:
             while process.poll() is None:
                 elapsed = time.time() - start_time
-                print(f"\r> building svedit... {_get_time(elapsed)} elapsed", end="", flush=True)
+                print(f"\r> building svedit... {_get_time(elapsed)} elapsed   ", end="", flush=True)
                 time.sleep(0.1)
 
         stdout, stderr = process.communicate()
@@ -206,12 +208,16 @@ if not DIST_DIR.exists() or not BUILD_DIR.exists():
     sys.exit(1)
 
 if BUILD_ONLY_MODE:
-    if (DIST_DIR / "fmts").exists():
-        _print(f"> removing old {DIST_DIR}/fmts directory")
-        shutil.rmtree(DIST_DIR / "fmts")
+    if not LOCAL_DIR.exists():
+        _print(f"> creating {LOCAL_DIR} directory")
+        LOCAL_DIR.mkdir(exist_ok=True)
 
-    _print(f"> copying fmts to {DIST_DIR}/fmts")
-    shutil.copytree(SRC_FMTS_DIR, DIST_DIR / "fmts")
+    if (LOCAL_DIR / "fmts").exists():
+        _print(f"> removing old {LOCAL_DIR}/fmts directory")
+        shutil.rmtree(LOCAL_DIR / "fmts")
+
+    _print(f"> copying fmts to {LOCAL_DIR}/fmts")
+    shutil.copytree(SRC_FMTS_DIR, LOCAL_DIR / "fmts")
 
     _print(f"> copying icon to {DIST_DIR}")
     shutil.copy(SRC_DIR / "svedit.png", DIST_DIR)

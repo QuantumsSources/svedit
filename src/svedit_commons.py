@@ -352,5 +352,5 @@ def generate_contribute_sh(mapped_fmt: str):
         .replace("%fmt", mapped_fmt)
         .replace("%repo", core.GITHUB_REPO)
     )
-    with open(core.PARENT_PATH / core.CONTRIB_FILE.replace("%fmt", mapped_fmt), "w") as f:
+    with open(core.CONTENT_PATH / core.CONTRIB_FILE.replace("%fmt", mapped_fmt), "w") as f:
         f.write(file_content)

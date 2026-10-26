@@ -694,7 +694,7 @@ class MCDSaveFile:
         buf.buf_enable_alt()
 
         self.changes.clear()
-        raise core.UserExitCommand(delta=1)
+        raise core.UserExitCommand(delta=2)
 
 class Notification:
     def __init__(self, **kwargs):
@@ -1211,7 +1211,7 @@ class MCDFileEditor:
                     file_name = core.CONTRIB_FILE.replace("%fmt", mapped_fmt)
                     cmn.generate_contribute_sh(mapped_fmt)
 
-                    core.info(f"Created {core.PARENT_PATH / file_name}.")
+                    core.info(f"Created {core.CONTENT_PATH / file_name}.")
                     core.info(f"Run to clone the repository and open {mapped_fmt}.xml in your code editor!")
                     buf.buf_enable_alt()
 

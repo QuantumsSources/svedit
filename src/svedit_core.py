@@ -1,21 +1,18 @@
 from pathlib import Path
 
-VERSION = "1.4"
+VERSION = "1.4.1"
 VERSION_NAME = "Crocodile"
 MIN_SIZE = (80, 27)
 
 # Thanks DuckStation!
 DATABASE_URL = "https://raw.githubusercontent.com/stenzek/duckstation/refs/heads/master/data/resources/gamedb.yaml"
-IS_DEBUG_SESSION = False
 
-if IS_DEBUG_SESSION:
-    PARENT_PATH  = Path("..")
-else:
-    PARENT_PATH  = Path(__file__).resolve().parent
-
-FORMATS_PATH = Path(PARENT_PATH / "fmts")
-YAML_PATH    = Path(PARENT_PATH / "gamedb.yaml")
-PKL_PATH     = Path(PARENT_PATH / "dbcache.pkl")
+HOME = Path.home().resolve()
+CONTENT_PATH = HOME / ".svedit"
+CONTENT_PATH.mkdir(exist_ok=True)
+FORMATS_PATH = Path(CONTENT_PATH / "fmts")
+YAML_PATH    = Path(CONTENT_PATH / "gamedb.yaml")
+PKL_PATH     = Path(CONTENT_PATH / "dbcache.pkl")
 CONTRIB_FILE = "CONTRIBUTE-%fmt.py"
 
 GITHUB_REPO = "QuantumsSources/svedit"
