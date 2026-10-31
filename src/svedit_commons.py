@@ -14,6 +14,11 @@ class IncorrectTerminalError(Exception):
     pass
 
 ANSI_KEY_MAP = {
+    " ": "SPACE",
+    "\r": "ENTER",
+    "\x09": "TAB",
+    "\x1B": "ESCAPE",
+    "\x7F": "BACKSPACE",
     "\x1B[A": "UP",
     "\x1B[B": "DOWN",
     "\x1B[C": "RIGHT",
@@ -26,10 +31,7 @@ ANSI_KEY_MAP = {
 
 def get_key(timeout: float = 0.05) -> str|None:
     fd = sys.stdin.fileno()
-    try:
-        old = termios.tcgetattr(fd)
-    except termios.error:
-        raise IncorrectTerminalError()
+    old = termios.tcgetattr(fd)
 
     try:
         tty.setraw(fd)
@@ -37,16 +39,16 @@ def get_key(timeout: float = 0.05) -> str|None:
         if not r or not (ch_bytes := os.read(fd, 1)):
             return None
 
-        ch = ch_bytes.decode("utf-8")
+        ch = ch_bytes.decode("utf-8", errors="ignore")
         if ch != "\x1b":
-            return ch
+            return ANSI_KEY_MAP.get(ch, ch)
 
         seq = ch
         while True:
             r_seq, _, _ = select.select([fd], [], [], 0.05)
             if not r_seq:
                 break
-            seq += os.read(fd, 1).decode("utf-8")
+            seq += os.read(fd, 1).decode("utf-8", errors="ignore")
             if seq in ANSI_KEY_MAP:
                 return ANSI_KEY_MAP[seq]
             if len(seq) > 6:

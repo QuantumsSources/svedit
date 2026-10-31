@@ -238,7 +238,7 @@ class CardPicker:
 
         if key in ("q", "Q"):
             raise core.UserExitCommand(delta=1)
-        elif key == "\x1B":
+        elif key == "ESCAPE":
             raise core.UserExitCommand(delta=2)
         elif key in ("RIGHT", "d", "D"):
             self.selected_block = (self.selected_block + 1) % 15

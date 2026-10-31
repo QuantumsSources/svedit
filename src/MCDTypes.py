@@ -5,13 +5,13 @@ from pathlib import Path
 from typing import TypeAlias
 from ansicodelib import ANSIBuffer as buf, ANSICursor as cur, ANSIColors as col
 
-class MCDReader:
-    class OutOfBoundsError(Exception):
-        pass
+class OutOfBoundsError(Exception):
+    pass
 
+class MCDReader:
     def __init__(self, stream: bytes | bytearray):
         self._pointer = 0
-        self._stream = stream
+        self._stream = bytearray(stream)
 
     def readall(self, *, reset_pointer: bool = False) -> bytes:
         if reset_pointer:
@@ -22,8 +22,8 @@ class MCDReader:
         length = max(1, length)
 
         if self._pointer + length > len(self._stream) and not wrap:
-            raise MCDReader.OutOfBoundsError(f"Requested to read past stream bounds! "
-                                             f"({self._pointer} + {length} > {len(self._stream)})")
+            raise OutOfBoundsError(f"Requested to read past stream bounds!"
+                                   f"({self._pointer} + {length} > {len(self._stream)})")
 
         if wrap:
             result = b''
@@ -36,7 +36,7 @@ class MCDReader:
         else:
             result = self._stream[self._pointer:self._pointer + length]
             self._pointer += length
-        return result
+        return bytes(result)
 
     def read_at(self, length: int = 1, start: int = 1, wrap: bool = False, *, return_at_end: bool = False):
         old_pc = self._pointer
@@ -52,8 +52,8 @@ class MCDReader:
             self._pointer = (self._pointer + n) % len(self._stream)
             return
         if self._pointer + n > len(self._stream):
-            raise MCDReader.OutOfBoundsError(f"Requested to read past stream bounds! "
-                                             f"({self._pointer} + {n} > {len(self._stream)})")
+            raise OutOfBoundsError(f"Requested to read past stream bounds! "
+                                   f"({self._pointer} + {n} > {len(self._stream)})")
         self._pointer += n
 
     def goto(self, goto: int, wrap: bool = False):
@@ -61,8 +61,8 @@ class MCDReader:
             self._pointer = goto % len(self._stream)
             return
         if goto < 0 or goto > len(self._stream):
-            raise MCDReader.OutOfBoundsError(f"Requested to send PC out of stream bounds! "
-                                             f"({goto} not in range [0:{len(self._stream)}])")
+            raise OutOfBoundsError(f"Requested to send PC out of stream bounds! "
+                                   f"({goto} not in range [0:{len(self._stream)}])")
         self._pointer = goto
 
     def reset(self):
@@ -91,10 +91,13 @@ class MCDWriter(MCDReader):
         open(file, "wb").write(content)
         self.reset()
 
-class MCDDirectoryFrame:
-    class MalformedFrameError(Exception):
-        pass
+class MalformedFrameError(Exception):
+    pass
 
+class MalformedBlockError(Exception):
+    pass
+
+class MCDDirectoryFrame:
     VALID_STATUS_BYTES = {
         0xA0: "Uninitialized",
         0xA1: "Deleted",
@@ -118,8 +121,8 @@ class MCDDirectoryFrame:
         reader = MCDReader(frame_stream)
         status = int.from_bytes(reader.read())
         if status not in MCDDirectoryFrame.VALID_STATUS_BYTES:
-            raise MCDDirectoryFrame.MalformedFrameError(f"Unknown status byte '0x{status:02X}' "
-                                                        f"found @ {128 * i + reader.pointer - 1}!")
+            raise MalformedFrameError(f"Unknown status byte '0x{status:02X}' "
+                                      f"found @ {128 * i + reader.pointer - 1}!")
 
         self._status = status
         reader.jump(9)
@@ -132,7 +135,7 @@ class MCDDirectoryFrame:
 
         self._region = reader.read(2)
         if MCDDirectoryFrame.VALID_REGIONS.get(self._region, None) is None:
-            raise MCDBlock.MalformedBlockError(f"Unknown region '{region}' found!")
+            raise MalformedBlockError(f"Unknown region '{self._region}' found!")
         self._product_code = reader.read(10).decode("ascii")
         self._format_id = reader.read(8).rstrip(b'\x00').decode("ascii")
 
@@ -248,9 +251,6 @@ class MCDPSIconImage:
                 buf.buf_write(characters[pixel_index])
 
 class MCDBlock:
-    class MalformedBlockError(Exception):
-        pass
-
     def __init__(self, block_stream: bytes, i: int, *, is_uninitialized: bool = False, dir_frame: MCDDirectoryFrame|None = None):
         self.block_id = i
         self.stream = block_stream
@@ -265,8 +265,8 @@ class MCDBlock:
         else:
             magic = reader.read(2)
             if magic != b'SC':
-                raise MCDBlock.MalformedBlockError(f"Expected first 2 bytes of non-header "
-                                                   f"block to be b'SC', found {magic}!")
+                raise MalformedBlockError(f"Expected first 2 bytes of non-header "
+                                          f"block to be b'SC', found {magic}!")
 
             icon_count_flag = int.from_bytes(reader.read())
             if icon_count_flag == 0x00:
@@ -278,8 +278,8 @@ class MCDBlock:
             elif icon_count_flag == 0x13:
                 icon_frame_count = 3
             else:
-                raise MCDBlock.MalformedBlockError(f"Invalid PSIcon count flag (Expected "
-                                                   f"0x00, 0x11, 0x12, or 0x13, got 0x{icon_count_flag:X}")
+                raise MalformedBlockError(f"Invalid PSIcon count flag (Expected "
+                                          f"0x00, 0x11, 0x12, or 0x13, got 0x{icon_count_flag:X}")
 
             reader.jump()
             bios_text = reader.read(64).rstrip(b'\x00')
@@ -333,8 +333,8 @@ class MCDHeaderBlock:
 
         magic = reader.read(2)
         if magic != b'MC':
-            raise MCDBlock.MalformedBlockError(f"Expected first 2 bytes of header "
-                                               f"block to be b'MC', found {magic}!")
+            raise MalformedBlockError(f"Expected first 2 bytes of header "
+                                      f"block to be b'MC', found {magic}!")
         reader.jump(126)
         for i in range(35):
             frame = MCDDirectoryFrame(reader.read(0x80), i)

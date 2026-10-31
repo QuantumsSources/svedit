@@ -47,7 +47,7 @@ class SvEditDesktop:
                 self.is_picker_open = False
             else:
                 raise core.UserExitCommand
-        elif key == "\x1B":
+        elif key == "ESCAPE":
             raise core.UserExitCommand
         elif key == ":":
             self.is_picker_open = not self.is_picker_open
@@ -66,7 +66,11 @@ class SvEditDesktop:
                     self.p_line -= 1
                 elif self.p_offset > 0:
                     self.p_offset -= 1
-            elif key == "\r":
+            elif key == "LEFT":
+                self.path = self.path.parent
+                self.p_line = 0
+                self.p_offset = 0
+            elif key in ("ENTER", "RIGHT"):
                 if self.p_contents:
                     selected = self.p_contents[self.p_offset + self.p_line]
                     if selected == "..":

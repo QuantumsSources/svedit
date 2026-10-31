@@ -1142,7 +1142,7 @@ class MCDFileEditor:
                         self._close_notif()
                         self._update_content()
                         return
-                    elif key in ("q", "Q", "\x1B"):
+                    elif key in ("q", "Q", "ESCAPE"):
                         self._close_notif()
                         return
                 else:
@@ -1151,9 +1151,9 @@ class MCDFileEditor:
                             self._close_notif()
                         self._update_content()
                         return
-                    elif key == "\x1B":
+                    elif key == "ESCAPE":
                         self._close_notif()
-                    elif key == "\x7F":
+                    elif key == "BACKSPACE":
                         top_notif.input_text = top_notif.input_text[:-1]
                         return
                     elif key and len(key) == 1 and ord(key) >= 32:
@@ -1161,7 +1161,7 @@ class MCDFileEditor:
                         if top_notif.max_len != 0:
                             top_notif.input_text = top_notif.input_text[:top_notif.max_len]
                         return
-            elif key in ("q", "Q", "\x1B"):
+            elif key in ("q", "Q", "ESCAPE"):
                 self._close_notif()
         else:
             if key in ("q", "Q"):
@@ -1169,7 +1169,7 @@ class MCDFileEditor:
                     self._close_notif()
                 else:
                     raise core.UserExitCommand(delta=1)
-            elif key == "\x1B":
+            elif key == "ESCAPE":
                 raise core.UserExitCommand(delta=2)
             elif key in ("UP", "w", "W"):
                 if not self.open_notifs:
