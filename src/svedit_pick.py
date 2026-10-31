@@ -290,7 +290,7 @@ class CardPicker:
             while self.running:
                 self.render()
                 key = cmn.get_key()
-                if key == "\r":
+                if key == "ENTER":
                     return self.mcd.GetBlock(self.selected_block)
                 self.update(key)
         finally:
