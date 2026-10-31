@@ -1,6 +1,6 @@
 from pathlib import Path
 
-VERSION = "1.4.2+1"
+VERSION = "1.4.2+2"
 VERSION_NAME = "Crocodile"
 MIN_SIZE = (80, 27)
 

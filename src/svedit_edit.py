@@ -1129,7 +1129,7 @@ class MCDFileEditor:
                         input_text = f"{choice.display} {colors.DIM}({choice.name}){colors.RESET}"
                         top_notif.input_text = input_text
                         return
-                    elif key == "\r":
+                    elif key == "ENTER":
                         selected_item = top_notif.limit_choices[top_notif.choice_index]
                         original_value = self._save_file.GetFileEntryOriginalValue(top_notif.path)
                         orig_val = original_value.value if isinstance(original_value, MCDEnumItem) else original_value
@@ -1146,7 +1146,7 @@ class MCDFileEditor:
                         self._close_notif()
                         return
                 else:
-                    if key == "\r":
+                    if key == "ENTER":
                         if self._save_notification_input(top_notif):
                             self._close_notif()
                         self._update_content()
@@ -1202,7 +1202,7 @@ class MCDFileEditor:
             elif key in ("y", "Y"):
                 if self._save_file.changes:
                     self._save_file.SerializeToFile(self._block, self._save_file.svedit_root)
-            elif key == "\r":
+            elif key == "ENTER":
                 line_text, path, is_expandable, is_uneditable = self._pretty_content[self._current_line]
                 is_create_new_sh = self._current_line == len(self._pretty_content) - 1
                 if is_create_new_sh:
